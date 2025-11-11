@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\src\Package.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\src\Bin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\src\TabuSearch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\src\Visualize.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\src\Package.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\src\Bin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\src\TabuSearch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\src\Visualize.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\justy\Downloads\bin-packing-tabu-search-main(PYTHON)\bin-packing-tabu-search-main\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{00DEEBFA-F697-3171-BB93-B86FCF8FD2C0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{620EDE06-8993-3187-9A5D-E6FDFDD41238}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

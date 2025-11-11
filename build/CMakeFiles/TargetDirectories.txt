@@ -1,0 +1,3 @@
+C:/Users/justy/Downloads/bin-packing-tabu-search-main(PYTHON)/bin-packing-tabu-search-main/build/CMakeFiles/bin_packing.dir
+C:/Users/justy/Downloads/bin-packing-tabu-search-main(PYTHON)/bin-packing-tabu-search-main/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/justy/Downloads/bin-packing-tabu-search-main(PYTHON)/bin-packing-tabu-search-main/build/CMakeFiles/ZERO_CHECK.dir
