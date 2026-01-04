@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <set>
 #include <sstream>
+#include <random>
 
 int evaluateSolution(const std::vector<Bin>& bins) {
 	int used = 0;
@@ -13,9 +14,12 @@ int evaluateSolution(const std::vector<Bin>& bins) {
 	return used;
 }
 
-std::vector<Bin> generateInitialSolution(const std::vector<Bin>& inputBins, const std::vector<Package>& packages) {
+std::vector<Bin> generateInitialSolution(const std::vector<Bin>& inputBins, const std::vector<Package>& packages, unsigned int seed) {
 	std::vector<Bin> bins = inputBins;
-	for (const auto& p : packages) {
+	std::vector<Package> pack = packages;
+	auto rng = std::default_random_engine{seed};
+	std::shuffle(std::begin(pack), std::end(pack), rng);
+	for (const auto& p : pack) {
 		for (auto& b : bins) {
 			Package copy = p;
 			if (b.placePackage(copy)) {
@@ -58,11 +62,17 @@ std::vector<std::vector<Bin>> getNeighbors(const std::vector<Bin>& solution) {
 	return neighbors;
 }
 
-std::vector<Bin> tabuSearch(const std::vector<Bin>& bins, const std::vector<Package>& packages, int iterations, int tabuSize) {
-	std::vector<Bin> current = generateInitialSolution(bins, packages);
+std::pair<std::vector<Bin>, std::vector<std::string>> tabuSearch(const std::vector<Bin>& bins, const std::vector<Package>& packages, const std::vector<Bin>& initial,const std::vector<std::string>& t_list, int iterations, int tabuSize) {
+	std::vector<Bin> current = initial;
 	std::vector<Bin> best = current;
 	std::vector<std::string> tabu;
-	tabu.reserve(static_cast<size_t>(tabuSize) + 1);
+	if (t_list.empty()) {
+		tabu.reserve(static_cast<size_t>(tabuSize) + 1);
+	}
+	else {
+		tabu = t_list;
+	}
+
 
 	for (int it = 0; it < iterations; ++it) {
 		auto neighbors = getNeighbors(current);
@@ -86,7 +96,8 @@ std::vector<Bin> tabuSearch(const std::vector<Bin>& bins, const std::vector<Pack
 			tabu.erase(tabu.begin());
 		}
 	}
-	return best;
+	
+	return std::make_pair(best, tabu);
 }
 
 

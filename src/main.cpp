@@ -2,13 +2,13 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <future>
 #include <string>
 #include <filesystem>
 #include "Package.h"
 #include "Bin.h"
 #include "TabuSearch.h"
 #include "Visualize.h"
-
 static bool readInstance(const std::string& path, std::vector<Bin>& bins, std::vector<Package>& packages) {
 	std::ifstream f(path);
 	if (!f) {
@@ -53,17 +53,54 @@ static bool readInstance(const std::string& path, std::vector<Bin>& bins, std::v
 }
 
 int main(int argc, char** argv) {
-	std::string instancePath = "BinPackingData/M1a.txt";
+	std::string instancePath = "../../../BinPackingData/M1e.txt";
 	if (argc >= 2) {
 		instancePath = argv[1];
 	}
 	std::vector<Bin> bins;
 	std::vector<Package> packages;
+	int n_threads = 3;
+	int iterations = 50;
+	int tabu_size = 10;
+	int loops = 5;
 	if (!readInstance(instancePath, bins, packages)) {
 		std::cerr << "Failed to read instance file\n";
 		return 1;
 	}
-	auto best = tabuSearch(bins, packages, 100, 10);
+
+	std::vector<std::future<std::pair<std::vector<Bin>, std::vector<std::string>>>> threads;
+	std::vector<std::string> best_tabu;
+	for (int i = 0; i < n_threads; i++) {
+		auto init = generateInitialSolution(bins, packages, i);
+		threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, init, best_tabu, iterations, tabu_size));
+	}
+	auto best = generateInitialSolution(bins, packages, 10);
+	std::cout << "Best: " << evaluateSolution(best) << '\n';
+	for (int i = 0; i < n_threads; i++) {
+		//threads[i].wait();
+		auto ret = threads[i].get();
+		if (evaluateSolution(best) >= evaluateSolution(ret.first)) {
+			best = ret.first;
+			best_tabu = ret.second;
+			std::cout << "Best at " << i << ": " << evaluateSolution(best) << "\n";
+		}
+	}
+	for (int i = 0; i < loops; i++) {
+		threads.clear();
+		for (int j = 0; j < n_threads; j++) {
+			threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, best, best_tabu, iterations, tabu_size));
+		}
+		for (int j = 0; j < n_threads; j++) {
+			//threads[i].wait();
+			auto ret = threads[j].get();
+			if (evaluateSolution(best) >= evaluateSolution(ret.first)) {
+				best = ret.first;
+				best_tabu = ret.second;
+				std::cout << "Best at " << j << ": " << evaluateSolution(best) << "\n";
+			}
+		}
+	}
+	//auto best = tabuSearch(bins, packages, init, 100, 10);
 	std::cout << "\nRozmieszczenie paczek:\n";
 	for (const auto& b : best) {
 		if (b.packages.empty()) continue;
