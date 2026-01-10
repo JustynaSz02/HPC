@@ -62,17 +62,11 @@ std::vector<std::vector<Bin>> getNeighbors(const std::vector<Bin>& solution) {
 	return neighbors;
 }
 
-std::pair<std::vector<Bin>, std::vector<std::string>> tabuSearch(const std::vector<Bin>& bins, const std::vector<Package>& packages, const std::vector<Bin>& initial,const std::vector<std::string>& t_list, int iterations, int tabuSize) {
+std::vector<Bin> tabuSearch(const std::vector<Bin>& bins, const std::vector<Package>& packages, const std::vector<Bin>& initial, int iterations, int tabuSize) {
 	std::vector<Bin> current = initial;
 	std::vector<Bin> best = current;
 	std::vector<std::string> tabu;
-	if (t_list.empty()) {
-		tabu.reserve(static_cast<size_t>(tabuSize) + 1);
-	}
-	else {
-		tabu = t_list;
-	}
-
+	tabu.reserve(static_cast<size_t>(tabuSize) + 1);
 
 	for (int it = 0; it < iterations; ++it) {
 		auto neighbors = getNeighbors(current);
@@ -97,7 +91,7 @@ std::pair<std::vector<Bin>, std::vector<std::string>> tabuSearch(const std::vect
 		}
 	}
 	
-	return std::make_pair(best, tabu);
+	return best;
 }
 
 

@@ -9,6 +9,7 @@
 #include "Bin.h"
 #include "TabuSearch.h"
 #include "Visualize.h"
+#include <random>
 static bool readInstance(const std::string& path, std::vector<Bin>& bins, std::vector<Package>& packages) {
 	std::ifstream f(path);
 	if (!f) {
@@ -63,39 +64,39 @@ int main(int argc, char** argv) {
 	int iterations = 50;
 	int tabu_size = 10;
 	int loops = 5;
+	auto rng = std::default_random_engine{10};
+	std::uniform_int_distribution<> tabu_rand(5, 20);
 	if (!readInstance(instancePath, bins, packages)) {
 		std::cerr << "Failed to read instance file\n";
 		return 1;
 	}
 
-	std::vector<std::future<std::pair<std::vector<Bin>, std::vector<std::string>>>> threads;
+	std::vector<std::future<std::vector<Bin>>> threads;
 	std::vector<std::string> best_tabu;
 	for (int i = 0; i < n_threads; i++) {
 		auto init = generateInitialSolution(bins, packages, i);
-		threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, init, best_tabu, iterations, tabu_size));
+		threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, init, iterations, tabu_rand(rng)));
 	}
 	auto best = generateInitialSolution(bins, packages, 10);
 	std::cout << "Best: " << evaluateSolution(best) << '\n';
 	for (int i = 0; i < n_threads; i++) {
 		//threads[i].wait();
 		auto ret = threads[i].get();
-		if (evaluateSolution(best) >= evaluateSolution(ret.first)) {
-			best = ret.first;
-			best_tabu = ret.second;
+		if (evaluateSolution(best) >= evaluateSolution(ret)) {
+			best = ret;
 			std::cout << "Best at " << i << ": " << evaluateSolution(best) << "\n";
 		}
 	}
 	for (int i = 0; i < loops; i++) {
 		threads.clear();
 		for (int j = 0; j < n_threads; j++) {
-			threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, best, best_tabu, iterations, tabu_size));
+			threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, best,iterations, tabu_rand(rng)));
 		}
 		for (int j = 0; j < n_threads; j++) {
 			//threads[i].wait();
 			auto ret = threads[j].get();
-			if (evaluateSolution(best) >= evaluateSolution(ret.first)) {
-				best = ret.first;
-				best_tabu = ret.second;
+			if (evaluateSolution(best) >= evaluateSolution(ret)) {
+				best = ret;
 				std::cout << "Best at " << j << ": " << evaluateSolution(best) << "\n";
 			}
 		}
