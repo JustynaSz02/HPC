@@ -9,14 +9,16 @@ public:
 	int id;
 	int w;
 	int h;
+	int area;
 	std::vector<Package> packages;
 
 	explicit Bin(int width, int height)
-	    : id(nextId++), w(width), h(height) {}
+	    : id(nextId++), w(width), h(height), area(width*height) {}
 
 	bool canFit(const Package& pkg) const;
 	bool placePackage(Package pkg);
 	bool removePackageById(int packageId);
+	double evaluateBin() const;
 };
 
 

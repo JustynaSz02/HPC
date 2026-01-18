@@ -14,6 +14,14 @@ int evaluateSolution(const std::vector<Bin>& bins) {
 	return used;
 }
 
+double evaluateSolutionTie(const std::vector<Bin>& bins) {
+	double score = 0.0;
+	for (const auto& b : bins) {
+		score = score + b.evaluateBin();
+	}
+	return score;
+}
+
 std::vector<Bin> generateInitialSolution(const std::vector<Bin>& inputBins, const std::vector<Package>& packages, unsigned int seed) {
 	std::vector<Bin> bins = inputBins;
 	std::vector<Package> pack = packages;
@@ -70,8 +78,8 @@ std::vector<Bin> tabuSearch(const std::vector<Bin>& bins, const std::vector<Pack
 
 	for (int it = 0; it < iterations; ++it) {
 		auto neighbors = getNeighbors(current);
-		neighbors.erase(
-			std::remove_if(neighbors.begin(), neighbors.end(), [&](const std::vector<Bin>& s){
+		neighbors.erase(std::remove_if(
+			neighbors.begin(), neighbors.end(), [&](const std::vector<Bin>& s){
 				std::string r = reprSolution(s);
 				return std::find(tabu.begin(), tabu.end(), r) != tabu.end();
 			}),
@@ -79,11 +87,21 @@ std::vector<Bin> tabuSearch(const std::vector<Bin>& bins, const std::vector<Pack
 		);
 		if (neighbors.empty()) break;
 		std::stable_sort(neighbors.begin(), neighbors.end(), [](const auto& a, const auto& b){
-			return evaluateSolution(a) < evaluateSolution(b);
+			if (evaluateSolution(a) == evaluateSolution(b)) {
+				return evaluateSolutionTie(a) > evaluateSolutionTie(b);
+			}else{
+				return evaluateSolution(a) < evaluateSolution(b);
+			}
+			
 		});
 		current = neighbors.front();
 		if (evaluateSolution(current) < evaluateSolution(best)) {
 			best = current;
+		}
+		else if (evaluateSolution(current) == evaluateSolution(best)) {
+			if (evaluateSolution(current) > evaluateSolution(best)) {
+				best = current;
+			}
 		}
 		tabu.push_back(reprSolution(current));
 		if (static_cast<int>(tabu.size()) > tabuSize) {

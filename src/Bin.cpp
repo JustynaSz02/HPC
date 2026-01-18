@@ -1,4 +1,5 @@
 #include "Bin.h"
+#include <cmath>
 
 int Bin::nextId = 0;
 
@@ -49,6 +50,19 @@ bool Bin::removePackageById(int packageId) {
 		}
 	}
 	return false;
+}
+double Bin::evaluateBin() const{
+	if (!packages.empty()) {
+		int packagesArea = 0;
+		for (const auto& p : packages) {
+			packagesArea = packagesArea + p.area;
+		}
+		double fill = pow(2.0, ((double)packagesArea / (double)area));
+		return fill;
+	}
+	else {
+		return 0.0;
+	}
 }
 
 

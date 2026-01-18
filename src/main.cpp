@@ -10,6 +10,7 @@
 #include "TabuSearch.h"
 #include "Visualize.h"
 #include <random>
+#include <chrono>
 static bool readInstance(const std::string& path, std::vector<Bin>& bins, std::vector<Package>& packages) {
 	std::ifstream f(path);
 	if (!f) {
@@ -54,15 +55,16 @@ static bool readInstance(const std::string& path, std::vector<Bin>& bins, std::v
 }
 
 int main(int argc, char** argv) {
-	std::string instancePath = "../../../BinPackingData/M1e.txt";
+	std::string instancePath = "../../../BinPackingData/data.txt";
 	if (argc >= 2) {
 		instancePath = argv[1];
 	}
+	std::cout << std::thread::hardware_concurrency() << '\n';
 	std::vector<Bin> bins;
 	std::vector<Package> packages;
-	int n_threads = 3;
+	int n_threads = 6;
 	int iterations = 50;
-	int tabu_size = 10;
+	//int tabu_size = 10;
 	int loops = 5;
 	auto rng = std::default_random_engine{10};
 	std::uniform_int_distribution<> tabu_rand(5, 20);
@@ -71,6 +73,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
+	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	std::vector<std::future<std::vector<Bin>>> threads;
 	std::vector<std::string> best_tabu;
 	for (int i = 0; i < n_threads; i++) {
@@ -78,16 +81,19 @@ int main(int argc, char** argv) {
 		threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, init, iterations, tabu_rand(rng)));
 	}
 	auto best = generateInitialSolution(bins, packages, 10);
-	std::cout << "Best: " << evaluateSolution(best) << '\n';
+	std::cout << "Best: " << evaluateSolution(best) << ", "<< evaluateSolutionTie(best) << '\n';
 	for (int i = 0; i < n_threads; i++) {
 		//threads[i].wait();
 		auto ret = threads[i].get();
-		if (evaluateSolution(best) >= evaluateSolution(ret)) {
+		if (evaluateSolution(best) > evaluateSolution(ret)  or (evaluateSolution(best) == evaluateSolution(ret) and evaluateSolutionTie(best) < evaluateSolutionTie(ret))) {
 			best = ret;
-			std::cout << "Best at " << i << ": " << evaluateSolution(best) << "\n";
+			std::cout << "Best at " << i << ": " << evaluateSolution(best) << ", " << evaluateSolutionTie(best) << '\n';
 		}
 	}
+	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+	std::cout << "Time elapsed = " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << "[s]" << std::endl;
 	for (int i = 0; i < loops; i++) {
+		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		threads.clear();
 		for (int j = 0; j < n_threads; j++) {
 			threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, best,iterations, tabu_rand(rng)));
@@ -95,11 +101,13 @@ int main(int argc, char** argv) {
 		for (int j = 0; j < n_threads; j++) {
 			//threads[i].wait();
 			auto ret = threads[j].get();
-			if (evaluateSolution(best) >= evaluateSolution(ret)) {
+			if (evaluateSolution(best) > evaluateSolution(ret) or (evaluateSolution(best) == evaluateSolution(ret) and evaluateSolutionTie(best) < evaluateSolutionTie(ret))) {
 				best = ret;
-				std::cout << "Best at " << j << ": " << evaluateSolution(best) << "\n";
+				std::cout << "Best at " << j << ": " << evaluateSolution(best) << ", " << evaluateSolutionTie(best) << '\n';
 			}
 		}
+		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+		std::cout << "Time elapsed = " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << "[s]" << std::endl;
 	}
 	//auto best = tabuSearch(bins, packages, init, 100, 10);
 	std::cout << "\nRozmieszczenie paczek:\n";
