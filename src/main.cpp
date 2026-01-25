@@ -5,17 +5,18 @@
 #include <future>
 #include <string>
 #include <filesystem>
+#include <thread>
 #include "Package.h"
 #include "Bin.h"
 #include "TabuSearch.h"
 #include "Visualize.h"
-#include "GpuScoring.h"
 #include <random>
 #include <chrono>
+
 static bool readInstance(const std::string& path, std::vector<Bin>& bins, std::vector<Package>& packages) {
 	std::ifstream f(path);
 	if (!f) {
-		std::cerr << "Cannot open file: " << path << "\n";
+		std::cerr << "[ERROR] Cannot open file: " << path << "\n";
 		return false;
 	}
 	int n = 0;
@@ -36,7 +37,7 @@ static bool readInstance(const std::string& path, std::vector<Bin>& bins, std::v
 	}
 	{
 		std::string dummy;
-		std::getline(f, dummy); // blank line
+		std::getline(f, dummy);
 	}
 	int m = 0;
 	{
@@ -56,122 +57,85 @@ static bool readInstance(const std::string& path, std::vector<Bin>& bins, std::v
 }
 
 int main(int argc, char** argv) {
-	std::cout << "=== PROGRAM STARTING ===\n";
-	std::cout.flush();
-	
-	std::string instancePath = "../../../BinPackingData/data.txt";
-	int n_threads = 8;
-	int iterations = 50;
-	
-	// Parsuj argumenty: [plik_danych] [liczba_wątków] [iteracje]
+	std::string instancePath = "BinPackingData/M1b.txt";
 	if (argc >= 2) {
 		instancePath = argv[1];
 	}
-	if (argc >= 3) {
-		n_threads = std::stoi(argv[2]);
-		if (n_threads < 1) n_threads = 1;
-	}
-	if (argc >= 4) {
-		iterations = std::stoi(argv[3]);
-		if (iterations < 1) iterations = 50;
-	}
-	
-	std::cout << "Hardware threads: " << std::thread::hardware_concurrency() << '\n';
-	std::cout.flush();
+
+	std::cout << "--- SYSTEM INFO ---" << std::endl;
+	std::cout << "Hardware Concurrency: " << std::thread::hardware_concurrency() << " cores available." << std::endl;
+
 	std::vector<Bin> bins;
 	std::vector<Package> packages;
-	//int tabu_size = 10;
+	int n_threads = 6;
+	int iterations = 100;
 	int loops = 5;
-	auto rng = std::default_random_engine{10};
-	std::uniform_int_distribution<> tabu_rand(5, 20); //rozmiar listy tabu bedzie losowy od 5 do 20
+	auto rng = std::default_random_engine{ 10 };
+	std::uniform_int_distribution<> tabu_rand(5, 20);
+
 	if (!readInstance(instancePath, bins, packages)) {
-		std::cerr << "Failed to read instance file\n";
+		std::cerr << "[CRITICAL] Failed to read instance file." << std::endl;
 		return 1;
 	}
+	std::cout << "[SUCCESS] Data loaded. Packages: " << packages.size() << std::endl;
 
-	// Włącz logowanie wydajności (opcjonalne)
-	setPerformanceLogging(true);
-	resetPerformanceStats();
-	
-	std::cout << "=== START PROGRAM ===\n";
-	std::cout << "CUDA available: " << (isCudaAvailable() ? "YES" : "NO") << "\n";
-	std::cout << "Threads: " << n_threads << "\n";
-	std::cout << "Iterations: " << iterations << "\n";
-	std::cout << "Starting Tabu Search...\n";
-	
-	// Rozpocznij pomiar całkowitego czasu wykonania (wszystkie fazy)
-	std::chrono::steady_clock::time_point programBegin = std::chrono::steady_clock::now();
-	std::chrono::steady_clock::time_point begin = programBegin;
+	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	std::vector<std::future<std::vector<Bin>>> threads;
-	std::vector<std::string> best_tabu;
+
+	std::cout << "\n--- PHASE 1: INITIAL RANDOMIZED SEARCH ---" << std::endl;
 	for (int i = 0; i < n_threads; i++) {
 		auto init = generateInitialSolution(bins, packages, i);
 		threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, init, iterations, tabu_rand(rng)));
 	}
-	auto best = generateInitialSolution(bins, packages, 10);
-	std::cout << "Best: " << evaluateSolution(best) << ", "<< evaluateSolutionTie(best) << '\n';
+
+	std::vector<Bin> best;
+	bool first_collected = true;
+
 	for (int i = 0; i < n_threads; i++) {
-		//threads[i].wait();
 		auto ret = threads[i].get();
-		if (evaluateSolution(best) > evaluateSolution(ret)  or (evaluateSolution(best) == evaluateSolution(ret) and evaluateSolutionTie(best) < evaluateSolutionTie(ret))) {
+		int current_bins = evaluateSolution(ret);
+		double current_tie = evaluateSolutionTie(ret);
+		std::cout << "[MAIN] Thread " << i << " returned. Bins: " << current_bins << ", Score: " << current_tie << std::endl;
+
+		if (first_collected || current_bins < evaluateSolution(best) ||
+			(current_bins == evaluateSolution(best) && current_tie > evaluateSolutionTie(best))) {
 			best = ret;
-			std::cout << "Best at " << i << ": " << evaluateSolution(best) << ", " << evaluateSolutionTie(best) << '\n';
+			first_collected = false;
+			std::cout << ">>> [UPDATE] New Global Best from Thread " << i << "!" << std::endl;
 		}
 	}
-	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-	auto totalMs = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-	std::cout << "Time elapsed = " << (totalMs / 1000.0) << "[s] (" << totalMs << "ms)" << std::endl;
-	
-	// Wyświetl statystyki wydajności po pierwszej iteracji (bez resetowania - zbieramy wszystkie statystyki)
-	printPerformanceStats();
-	// NIE resetujemy statystyk - zbieramy je przez cały program
-	
-	for (int i = 0; i < loops; i++) {
-		std::chrono::steady_clock::time_point loopBegin = std::chrono::steady_clock::now();
+
+	// REFINEMENT LOOPS
+	for (int l = 0; l < loops; l++) {
+		std::cout << "\n--- PHASE 2: REFINEMENT LOOP " << l + 1 << "/" << loops << " ---" << std::endl;
+		std::chrono::steady_clock::time_point loop_begin = std::chrono::steady_clock::now();
 		threads.clear();
+
 		for (int j = 0; j < n_threads; j++) {
-			threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, best,iterations, tabu_rand(rng)));
+			threads.push_back(std::async(std::launch::async, tabuSearch, bins, packages, best, iterations, tabu_rand(rng)));
 		}
+
 		for (int j = 0; j < n_threads; j++) {
-			//threads[i].wait();
 			auto ret = threads[j].get();
-			if (evaluateSolution(best) > evaluateSolution(ret) or (evaluateSolution(best) == evaluateSolution(ret) and evaluateSolutionTie(best) < evaluateSolutionTie(ret))) {
+			int ret_bins = evaluateSolution(ret);
+			double ret_tie = evaluateSolutionTie(ret);
+
+			if (ret_bins < evaluateSolution(best) || (ret_bins == evaluateSolution(best) && ret_tie > evaluateSolutionTie(best))) {
 				best = ret;
-				std::cout << "Best at " << j << ": " << evaluateSolution(best) << ", " << evaluateSolutionTie(best) << '\n';
+				std::cout << ">>> [UPDATE] Loop " << l + 1 << ": Improved Best via Thread " << j << " (Bins: " << ret_bins << ")" << std::endl;
 			}
 		}
-		std::chrono::steady_clock::time_point loopEnd = std::chrono::steady_clock::now();
-		auto loopMs = std::chrono::duration_cast<std::chrono::milliseconds>(loopEnd - loopBegin).count();
-		std::cout << "Time elapsed = " << (loopMs / 1000.0) << "[s] (" << loopMs << "ms)" << std::endl;
+		auto loop_end = std::chrono::steady_clock::now();
+		std::cout << "[INFO] Loop completed in " << std::chrono::duration_cast<std::chrono::milliseconds>(loop_end - loop_begin).count() << "ms" << std::endl;
 	}
-	
-	// Wyświetl finalne statystyki wydajności
-	std::cout << "\n=== Performance Statistics ===" << std::endl;
-	printPerformanceStats();
-	
-	// Wyświetl całkowity czas wykonania (wszystkie fazy)
-	std::chrono::steady_clock::time_point programEnd = std::chrono::steady_clock::now();
-	auto totalTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(programEnd - programBegin).count();
-	std::cout << "Total execution time: " << (totalTimeMs / 1000.0) << "s (" << totalTimeMs << "ms)" << std::endl;
-	
-	//auto best = tabuSearch(bins, packages, init, 100, 10);
-	std::cout << "\nRozmieszczenie paczek:\n";
-	for (const auto& b : best) {
-		if (b.packages.empty()) continue;
-		std::cout << "Bin ID " << b.id << ":\n";
-		for (const auto& p : b.packages) {
-			std::cout << "  Package ID " << p.id
-			          << ": X=" << p.x << ", Y=" << p.y
-			          << ", W=" << p.w << ", H=" << p.h
-			          << ", Rotated=" << (p.rotated ? "True" : "False") << "\n";
-		}
-	}
-	int used = evaluateSolution(best);
-	std::cout << "Best solution found: " << used << "\n";
-	// export SVGs
+
+	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+	std::cout << "\n--- FINAL RESULTS ---" << std::endl;
+	std::cout << "Total Time: " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << "s" << std::endl;
+	std::cout << "Final Bins Used: " << evaluateSolution(best) << std::endl;
+
 	exportSolutionToSvg(best, "out_svg", 20);
-	std::cout << "SVGs zapisane w folderze: out_svg (styl v2: tytul/siatka/osi)\n";
+	std::cout << "[SUCCESS] Visualization saved." << std::endl;
+
 	return 0;
 }
-
-
