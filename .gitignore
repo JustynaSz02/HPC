@@ -1,0 +1,50 @@
+# CMake build directories
+build/
+build_*/
+cmake-build-*/
+
+# Compiled files
+*.obj
+*.o
+*.exe
+*.dll
+*.lib
+*.a
+*.so
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.vcxproj
+*.vcxproj.filters
+*.sln
+*.tlog
+*.recipe
+*.lastbuildstate
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Output files
+out_svg/
+experiment_results/
+*.svg
+*.png
+*.json
+
+# IDE files
+.vs/
+.idea/
+*.user
+*.suo
+*.sdf
+
+# OS files
+.DS_Store
+Thumbs.db
+
