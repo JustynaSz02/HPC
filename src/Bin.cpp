@@ -9,10 +9,10 @@ bool Bin::canFit(const Package& package) const {
 	}
 	for (const auto& p : packages) {
 		const bool separated =
-		    (package.x + package.w <= p.x) ||
-		    (package.x >= p.x + p.w) ||
-		    (package.y + package.h <= p.y) ||
-		    (package.y >= p.y + p.h);
+			(package.x + package.w <= p.x) ||
+			(package.x >= p.x + p.w) ||
+			(package.y + package.h <= p.y) ||
+			(package.y >= p.y + p.h);
 		if (!separated) {
 			return false;
 		}
@@ -36,7 +36,7 @@ bool Bin::placePackage(Package package) {
 			}
 		}
 		if (rotate == 1) {
-			package.rotate90(); // revert rotation if needed
+			package.rotate90(); // revert
 		}
 	}
 	return false;
@@ -51,13 +51,12 @@ bool Bin::removePackageById(int packageId) {
 	}
 	return false;
 }
-double Bin::evaluateBin() const{
+
+double Bin::evaluateBin() const {
 	if (!packages.empty()) {
-		int packagesArea = 0;
-		for (const auto& p : packages) {
-			packagesArea = packagesArea + p.area;
-		}
-		double fill = pow(2.0, ((double)packagesArea / (double)area));
+		int packagesArea = currentArea();
+		// Heuristic: Higher score for tighter packing
+		double fill = pow((double)packagesArea / (double)area, 2.0);
 		return fill;
 	}
 	else {
@@ -65,4 +64,8 @@ double Bin::evaluateBin() const{
 	}
 }
 
-
+int Bin::currentArea() const {
+	int total = 0;
+	for (const auto& p : packages) total += p.area;
+	return total;
+}

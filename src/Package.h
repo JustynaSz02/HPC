@@ -1,5 +1,4 @@
 #pragma once
-#include <string>
 
 class Package {
 public:
@@ -13,7 +12,8 @@ public:
 
 	Package() = default;
 	Package(int packageId, int width, int height, int px = 0, int py = 0)
-	    : id(packageId), w(width), h(height), x(px), y(py), rotated(false), area(width*height) {}
+		: id(packageId), w(width), h(height), x(px), y(py), rotated(false), area(width* height) {
+	}
 
 	void moveTo(int nx, int ny) {
 		x = nx;
@@ -21,9 +21,7 @@ public:
 	}
 
 	void rotate90() {
-		std::swap(w, h);
+		int temp = w; w = h; h = temp;
 		rotated = !rotated;
 	}
 };
-
-
